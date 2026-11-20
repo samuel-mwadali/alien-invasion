@@ -517,3 +517,55 @@ def run_game():
 run_game()
 ```
 Now any value of ship_speed_factor greater than one will make the ship move faster. This will be helpful in making the ship respond quickly enough to shoot down aliens, and it will let us change the tempo of the game as the player progresses in gameplay:
+## Limiting the Ship's Range
+At this point the ship will disappear off either edge of the screen if you hold down an arrow key long enough. The ship stops moving when it reaches the edge of the screen. We do this by modifying the update() method in Ship:
+```python
+def update(self):
+    # Update the ship's position based on movement flags.
+    # Update the ship's center value, not the react.
+    if self.moving_right and self.react.right < self.screen_rect.right:
+        self.center += self.ai_settings.ship_speed_factor
+    if self.moving_left and self.react.left > 0:
+        self.center -= self.ai_settings.ship_speed_factor
+
+    # Update rect object from self.center.
+    self.rect.centerx = self.center
+```
+if you run alien_invasion.py now, the ship should stop moving at either edge of the screen.
+## Refactoring check_events()
+The check_events() function will increase in length as we continue to develop the game, so let's break check_events() into two more functions: one that handles KEYDOWN events and another that handles KEYUP events:
+```python
+def check_keydown_events(event, ship):
+    # Respond to keypresses.
+    if event.key == pygame.K_RIGHT:
+        ship.moving_right = True
+    elif event.key == pygame.K_LEFT:
+        ship.moving_left = True
+
+def check_keyup_events(event, ship):
+    # Respond to key releases.
+    if event.key == pygame.K_RIGHT:
+        ship.moving_right = False
+    elif event.key == pygame.K_LEFT:
+        ship.moving_left = False
+
+def check_events(ship):
+    # Respond to keypresses and mouse events.
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            sys.exit()
+        elif event.type == pygame.KEYDOWN:
+            check_keydow_events(event, ship)
+        elif event.type == pygame.KEYUP:
+            check_keyup_events(event, ship)
+```
+We make two new functions: check_keydown_events() and check_key_up_events(). Each needs an event parameter and a ship parameter. The bodies of these two functions are copied from check_events(), and we've replaced the old code with calls to the new functions. The check_events() function is simpler now with this cleaner code structure, which will make it easier to develop further responses to player input.
+# A Quick Recap
+## alien_invasion.py
+The main file, alien_invasion.py, creates a number of important objects used throughout the game: the settings are stored in ai_settings, the main display surface is stored in screen and ship instance is created in this file as well. alien_invasion.py is the only file you need to run when you want play alien invasion. The other files-settings.py, game_functions.py, ship.py - contain code that is imported, directly or indirectly, into this file.
+## settings.py
+The settings.py file contains the Settings class. This class only has an __init__ () method, which initializes attributes controlling the game's apperance and the ship's speed.
+## game_functions.py
+The game_functions.py file contains a number of functions that carry out the bulk of the work in the game. The check_events() functions that carry out the bulk of the work in the game. The check_events() function detects relevant events, such as keypresses and releases, and process each of these types of events through the helper functions check_keydown_events() and check_keyup_events(). For now, these functions manage the movement of the ship. The game_functions module also contains update_screen(), which redraws the screen on each pass through the main loop.
+## ship.py
+The ship.py file contains the Ship class. Ship has an __init__() method, an update() method to manage the ship's position and a blitme() method to draw the ship to the screen. The actual imagae of the ship is stored in ship.bmp, which is in the images folder.
