@@ -232,4 +232,288 @@ def run_game():
 
 run_game()
 ```
-These two functions make the while loop simpler and will make further development easier. Instead of working inside run_game(), we can do most of our work in the middle game_functions.
+These two functions make the while loop simpler and will make further development easier. Instead of working inside run_game(), we can do most of our work in the middle game_functions. Now that our code is restructured to make it easier to add to, we can work on the dynamic aspects of the game!
+## Piloting the Ship
+Let's give the player the ability to move the ship right and left. To do this, we'll write code that responds when the player the right or left arrow key.
+## Responds to a Keypress
+Whenever the player presses a key, that keypress is registered in Pygame as an event. Each event is picked up by the pygame.get() method, so we need to specify in our check events () function what kind of events to check for. Each keypress is registered as KEYDOWN event. When a KEYDOWN event is detected, we need to check whether the key that was pressed is one that triggers a certain event. For example, if the right arrow is key is pressed, we increase the ship's rect.centerx value to move the ship to the right:
+```python
+import sys
+import pygame
+def check_events(ship):
+    # Respond to keypresses and mouse events,
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            sys.exit()
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_RIGHT:
+                # Move the ship to the right
+                ship.rect.centerx += 10
+
+def update_screen(ai_settings, screen, ship):
+    # Update images on the screen and flip to the new screen.
+    # Redraw the screen during each pass through the loop.
+    screen.fill(ai_settings.bg_color)
+    ship.blitme()
+
+    # Make the most recently dreawn screen visible
+    pygame.display.flip()
+```
+we need to update the call to check_events() in alien_ivasion.py so it passes ship as an argument:
+```python
+import pygame
+from settings import Settings
+from ship import Ship
+import game_functions as gf
+
+def run_game():
+    # initialize game and create a screen object.
+    pygame.init()
+    ai_settings = Settings()
+    screen = pygame.display.set_mode((ai_settings.screen_width, ai_settings.screen_height))
+    pygame.display.set_caption("Alien Invasion")
+
+    # Make a ship
+    ship = Ship(screen)
+
+    # start the main loop for the game.
+    while True:
+        gf.check_events(ship)
+        gf.update_screen(ai_settings, screen, ship)
+
+run_game()
+```
+## Allowing continuous movement
+When the player holds down the right arrow key, ship to continue moving right until the player releases the key.
+Here are the changes to Ship class:
+```python
+import pygame
+class Ship():
+    def __init__ (self, screen):
+        # Initialize the ship and set its starting position.
+        self.screen = screen
+
+        # Load the ship image, resize it, and get its rect.
+        self.image = pygame.image.load("images/ship.bmp")
+        self.image = pygame.transform.scale(self.image, (100, 85))
+
+        self.rect = self.image.get_rect()
+        self.screen_rect = screen.get_rect()
+
+        # Start each new ship at the bottom center of the screen.
+        self.rect.centerx = self.screen_rect.centerx
+        self.rect.bottom = self.screen_rect.bottom
+
+        # Movement flag
+        self.moving_right = False
+
+    def update(self):
+        # Update the ship's position based on the movement flag.
+        if self.moving_right:
+            self.rect.centerx += 1
+
+    def blitme(self):
+        # Draw the ship at its current location.
+        self.screen.blit(self.image, self.rect)
+```
+Now modify check_events() so that moving_right is set to True when the right arrow key is pressed and False is pressed and False when the key is realeased:
+```python
+import sys
+import pygame
+def check_events(ship):
+    # Respond to keypresses and mouse events,
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            sys.exit()
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_RIGHT:
+                # Move the ship to the right
+                ship.moving_right = True
+            elif event.type == pygame.KEYUP:
+                if event.key == pygame.K_RIGHT:
+                    ship.moving_right = False
+
+def update_screen(ai_settings, screen, ship):
+    # Update images on the screen and flip to the new screen.
+    # Redraw the screen during each pass through the loop.
+    screen.fill(ai_settings.bg_color)
+    ship.blitme()
+
+    # Make the most recently dreawn screen visible
+    pygame.display.flip()
+```
+Finally, we modify the whil loop in alien_invasion.py so it calls the ship's update() method on each pass through the loop:
+```python
+import pygame
+from settings import Settings
+from ship import Ship
+import game_functions as gf
+
+def run_game():
+    # initialize game and create a screen object.
+    pygame.init()
+    ai_settings = Settings()
+    screen = pygame.display.set_mode((ai_settings.screen_width, ai_settings.screen_height))
+    pygame.display.set_caption("Alien Invasion")
+
+    # Make a ship
+    ship = Ship(screen)
+
+    # start the main loop for the game.
+    while True:
+        gf.check_events(ship)
+        ship.update()
+        gf.update_screen(ai_settings, screen, ship)
+
+run_game()
+```
+When you run alien_invasion.py and hold down the right key, the ship should move oontinuously to the right until you release the key.
+## Moving both left and right
+Now we can move continuously to the right, we add movement to the left.
+```python
+import pygame
+class Ship():
+    def __init__ (self, screen):
+        # Initialize the ship and set its starting position.
+        self.screen = screen
+
+        # Load the ship image, resize it, and get its rect.
+        self.image = pygame.image.load("images/ship.bmp")
+        self.image = pygame.transform.scale(self.image, (100, 85))
+
+        self.rect = self.image.get_rect()
+        self.screen_rect = screen.get_rect()
+
+        # Start each new ship at the bottom center of the screen.
+        self.rect.centerx = self.screen_rect.centerx
+        self.rect.bottom = self.screen_rect.bottom
+
+        # Movement flags
+        self.moving_right = False
+        self.moving_left = False
+
+    def update(self):
+        # Update the ship's position based on the movement flags.
+        if self.moving_right:
+            self.rect.centerx += 1
+        if self.moving_left:
+            self.rect_centerx -= 1
+
+    def blitme(self):
+        # Draw the ship at its current location.
+        self.screen.blit(self.image, self.rect)
+```
+We use two separate if blocks rather than elif in update() to allow the ship's rect.centerx value.<br>We have to make two adjustments to check_events():
+```python
+import sys
+import pygame
+def check_events(ship):
+    # Respond to keypresses and mouse events,
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            sys.exit()
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_RIGHT:
+                # Move the ship to the right
+                ship.moving_right = True
+            elif event.key == pygame.K_LEFT:
+                ship.moving_left = True
+        elif event.type == pygame.KEYUP:
+            if event.key == pygame.K_RIGHT:
+                ship.moving_right = False
+            elif event.key == pygame.K_LEFT:
+                ship.moving_left = False
+
+def update_screen(ai_settings, screen, ship):
+    # Update images on the screen and flip to the new screen.
+    # Redraw the screen during each pass through the loop.
+    screen.fill(ai_settings.bg_color)
+    ship.blitme()
+
+    # Make the most recently dreawn screen visible
+    pygame.display.flip()
+```
+If you run alien_invasion.py now, you should be able to move the ship continuouly to the right and left. If you hold down both keys, the ship should stop moving.
+## Adjusting the ship's speed
+Currently, the ship moves one pixel per cycle through the while loop, but we can take finer control of the ship's speed by adding a ship_speed_factor attribute to the Settings class. Here's the new attribute in settings.py
+```python
+class Settings():
+    # A class to store all settings for Alien Invasion.
+    def __init__ (self):
+        # Initialize the game's settings.
+        # Screen settings
+        self.screen_width = 1200
+        self.screen_height = 500
+        self.bg_color = (230,230,230)
+
+        # Ship settings
+        self.ship_speed_factor = 1.5
+```
+adjust it's position by 1.5 pixels rather than 1 pixel. Decimal values for the speed setting to give us finer control of the ship's speed when we increase the tempo of the game later on.<br> So we need to make some modification to Ship:
+```python
+import pygame
+class Ship():
+    def __init__ (self,ai_settings, screen):
+        # Initialize the ship and set its starting position.
+        self.screen = screen
+        self.ai_settings = ai_settings
+
+        # Load the ship image, resize it, and get its rect.
+        self.image = pygame.image.load("images/ship.bmp")
+        self.image = pygame.transform.scale(self.image, (100, 85))
+
+        self.rect = self.image.get_rect()
+        self.screen_rect = screen.get_rect()
+
+        # Start each new ship at the bottom center of the screen.
+        self.rect.centerx = self.screen_rect.centerx
+        self.rect.bottom = self.screen_rect.bottom
+
+        # Store a decimal value for the ship's center
+        self.center = float(self.rect.centerx)
+
+        # Movement flags
+        self.moving_right = False
+        self.moving_left = False
+
+    def update(self):
+        # Update the ship's position based on the movement flags.
+        # Update the ship's center value, not the rect.
+        if self.moving_right and self.rect.right < self.screen_rect.right:
+            self.center += self.ai_settings.ship_speed_factor 
+        if self.moving_left and self.rect.left > 0:
+            self.center -= self.ai_settings.ship_speed_factor 
+
+        # Update rect object from self.center
+        self.rect.centerx = self.center
+
+    def blitme(self):
+        # Draw the ship at its current location.
+        self.screen.blit(self.image, self.rect)
+```
+We need to pass ai_settings as an argument when we create an instance of ship in alien_invasion.py:
+```python
+import pygame
+from settings import Settings
+from ship import Ship
+import game_functions as gf
+
+def run_game():
+    # initialize game and create a screen object.
+    pygame.init()
+    ai_settings = Settings()
+    screen = pygame.display.set_mode((ai_settings.screen_width, ai_settings.screen_height))
+    pygame.display.set_caption("Alien Invasion")
+
+    # Make a ship
+    ship = Ship(ai_settings, screen)
+
+    # start the main loop for the game.
+    while True:
+        gf.check_events(ship)
+        ship.update()
+        gf.update_screen(ai_settings, screen, ship)
+
+run_game()
+```
+Now any value of ship_speed_factor greater than one will make the ship move faster. This will be helpful in making the ship respond quickly enough to shoot down aliens, and it will let us change the tempo of the game as the player progresses in gameplay:
